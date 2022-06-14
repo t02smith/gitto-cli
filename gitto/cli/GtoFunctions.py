@@ -1,6 +1,6 @@
-
+import datetime
 from os import path, mkdir, getcwd
-from gitto.repo.GtoRepo import GtoRepo
+from gitto.repo.GtoRepo import GtoRepo, openRepo, GtoCommit
 from gitto.repo.GtoErrors import RepoAlreadyInitialised
 
 
@@ -13,8 +13,7 @@ def init_repo():
         raise RepoAlreadyInitialised("Repository already initialised")
 
     mkdir(".gto")
-    with GtoRepo(path.split(getcwd())[-1], -1):
-        pass
+    mkdir(".gto/objects")
 
 
 def commit(message: str, autoPush: bool):
@@ -24,4 +23,11 @@ def commit(message: str, autoPush: bool):
     :param autoPush: whether to automatically push to remote
     :return: void
     """
-    pass
+    with openRepo() as repo:
+        curr_commit = GtoCommit()
+        curr_commit.message = message
+        curr_commit.message = datetime.datetime.now()
+
+        # auto add files
+
+        # check for changes

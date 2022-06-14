@@ -10,8 +10,17 @@ class GtoRepo:
     def __init__(self, name: str, repoId: int) -> None:
         self.name = name
         self.id = repoId
-        self.files = []
+        self.files = set()
         self.commits = []
+
+    def add(self, filename: str):
+        """
+        Add a new file to the repository
+        :param filename: the name of the file to add
+        :return: void
+        """
+        if filename not in self.files:
+            self.files.add(filename)
 
     def __enter__(self):
         return self
@@ -63,3 +72,5 @@ def saveRepo(repo: GtoRepo):
 
     with open("./.gto/repo.json", "w") as file:
         json.dump(repo.__dict__, file)
+
+# file IO
