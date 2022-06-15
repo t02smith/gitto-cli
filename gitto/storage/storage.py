@@ -1,4 +1,5 @@
-
+import os
+import pathspec
 from gitto.storage.objects import *
 from os.path import isdir, exists
 from os import mkdir
@@ -69,6 +70,11 @@ def write_commit(commit: CommitObject):
 # Reader function
 
 def read_object(obj_hash: str):
+    """
+    Reads an object from the object folder
+    :param obj_hash: the hash of the desired object
+    :return: the plaintext of the object
+    """
     output = ""
     with open(f".gto/objects/{obj_hash[:2]}/{obj_hash[2:]}", "rb") as f:
         while True:
@@ -77,3 +83,26 @@ def read_object(obj_hash: str):
                 break
             output += decompress(data).decode()
     return output
+
+
+# Generator functions
+
+def generate_objects():
+
+    # read .ignore file
+    spec = None
+    if os.path.exists(".gtoignore"):
+        with open(".gtoignore", "r") as g:
+            spec = pathspec.PathSpec.from_lines("gitwildmatch", g.readlines())
+
+    # find files to be committed
+    file_list = []
+    for root, dirs, files in os.walk("."):
+        if not spec.match_file(root):
+            for name in files:
+                filepath = os.path.join(root, name)
+                if spec is None or not spec.match_file(filepath):
+                    print(filepath)
+                    file_list.append(filepath)
+
+    # create file objects

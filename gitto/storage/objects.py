@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha1
-from functools import lru_cache
 
 """
 All data stored by gitto will need to be turned into some
@@ -20,15 +19,15 @@ class FileObject:
     """
 
     filename: str
-    hash: str = None
+    _hash: str = None
 
     def __hash__(self):
         """
         The hash is a sha1 hash of the files contents
         :return: hash
         """
-        if self.hash is not None:
-            return self.hash
+        if self._hash is not None:
+            return self._hash
 
         hasher = sha1()
         with open(self.filename, "rb") as f:
@@ -38,8 +37,8 @@ class FileObject:
                     break
                 hasher.update(data)
 
-        self.hash = hasher.hexdigest()
-        return self.hash
+        self._hash = hasher.hexdigest()
+        return self._hash
 
 
 @dataclass
@@ -52,7 +51,7 @@ class TreeObject:
     name: str
     files: list[FileObject]
     trees: list["TreeObject"]
-    hash: str = None
+    _hash: str = None
 
     def __hash__(self):
         """
@@ -60,8 +59,8 @@ class TreeObject:
         the file list and tree list
         :return: hash
         """
-        if self.hash is not None:
-            return self.hash
+        if self._hash is not None:
+            return self._hash
 
         hasher = sha1()
         hasher.update(bytes(self.name, "utf8"))
@@ -72,8 +71,8 @@ class TreeObject:
         for t in self.trees:
             hasher.update(bytes(t.__hash__(), "utf8"))
 
-        self.hash = hasher.hexdigest()
-        return self.hash
+        self._hash = hasher.hexdigest()
+        return self._hash
 
 
 @dataclass
@@ -87,7 +86,7 @@ class CommitObject:
     parent_hash: str
     timestamp: datetime
     tree_hash: str
-    hash: str = None
+    _hash: str = None
 
     def __hash__(self):
         """
@@ -95,8 +94,8 @@ class CommitObject:
         and the hash of the tree
         :return: hash
         """
-        if self.hash is not None:
-            return self.hash
+        if self._hash is not None:
+            return self._hash
 
         hasher = sha1()
         hasher.update(bytes(self.author, "utf8"))
@@ -105,5 +104,5 @@ class CommitObject:
         hasher.update(self.timestamp)
         hasher.update(bytes(self.tree_hash, "utf8"))
 
-        self.hash = hasher.hexdigest()
-        return self.hash
+        self._hash = hasher.hexdigest()
+        return self._hash

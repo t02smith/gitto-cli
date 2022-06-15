@@ -1,8 +1,7 @@
 import typer
 from typing import Optional
-from gitto.cli.GtoFunctions import *
+from gitto.cli.functions import *
 from rich.console import Console
-from gitto.repo.GtoUtil import *
 
 # SETUP
 
@@ -29,8 +28,7 @@ def commit(
         msg: Optional[str] = typer.Option("", "--message", "-m"),
         autoPush: Optional[bool] = typer.Option(False, "--auto-push", "-p")
 ) -> None:
-    h = write_file(msg)
-    console.print(read_file(h))
+    pass
 
 
 # PUSH

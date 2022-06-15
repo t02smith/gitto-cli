@@ -6,6 +6,12 @@ import json
 from datetime import datetime
 
 
+"""
+
+TO BE REMOVED
+
+"""
+
 class GtoRepo:
     def __init__(self, name: str, repoId: int) -> None:
         self.name = name
@@ -19,8 +25,10 @@ class GtoRepo:
         :param filename: the name of the file to add
         :return: void
         """
-        if filename not in self.files:
-            self.files.add(filename)
+        if not path.exists(filename):
+            raise FileNotFoundError(f"file '{filename}' not found")
+
+        self.files.add(filename)
 
     def __enter__(self):
         return self
