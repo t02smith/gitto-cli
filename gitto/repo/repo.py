@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from gitto.repo.GtoErrors import *
+from gitto.repo.errors import *
 from os import path
 import json
 from datetime import datetime

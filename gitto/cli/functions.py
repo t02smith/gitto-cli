@@ -1,7 +1,7 @@
 import datetime
 from os import path, mkdir, getcwd
-from gitto.repo.GtoRepo import GtoRepo, openRepo, GtoCommit
-from gitto.repo.GtoErrors import RepoAlreadyInitialised
+from gitto.repo.repo import GtoRepo, openRepo, GtoCommit
+from gitto.repo.errors import RepoAlreadyInitialised
 
 
 def init_repo():
