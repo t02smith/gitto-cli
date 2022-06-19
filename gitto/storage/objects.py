@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from hashlib import sha1
@@ -27,7 +28,16 @@ class FileObject:
     Represents the contents of a file stored
     """
     filename: str
-    _hash: str = None
+    _last_updated: datetime
+    _hash: str
+
+    def __init__(self, filename: str, _hash: str = None):
+        if not os.path.exists(filename):
+            raise FileNotFoundError
+
+        self.filename = filename
+        self._last_updated = datetime.fromtimestamp(os.stat(filename).st_mtime)
+        self._hash = _hash
 
     def __hash__(self):
         """
@@ -35,7 +45,11 @@ class FileObject:
         :return: hash
         """
         if self._hash is not None:
-            return self._hash
+            timestamp = datetime.fromtimestamp(os.stat(self.filename).st_mtime)
+            if timestamp > self._last_updated:
+                self._last_updated = timestamp
+            else:
+                return self._hash
 
         hasher = sha1()
         with open(self.filename, "rb") as f:

@@ -1,4 +1,9 @@
 from zlib import decompress
+from os.path import exists
+
+
+def object_exists(obj_hash: str):
+    return exists(f".gto/objects/{obj_hash[:2]}/{obj_hash[2:]}")
 
 
 def read_object(obj_hash: str):

@@ -2,41 +2,33 @@ import datetime
 import os
 import pathspec
 from gitto.storage.objects import *
-from os.path import isdir, exists
-from os import mkdir
-from zlib import compress, decompress
+from zlib import compress
 from gitto.storage.storage_info import *
 from gitto.storage.util import *
 
-
-def object_exists(obj_hash: str):
-
-    # check if identical object exists
-    if exists(f".gto/objects/{obj_hash[:2]}/{obj_hash[2:]}"):
-        return True
-
-    # create object directory
-    if not isdir(f".gto/objects/{obj_hash[:2]}"):
-        mkdir(f".gto/objects/{obj_hash[:2]}")
-
-    return False
-
+OBJECTS_FOLDER = ".gto/objects"
 
 # Writer functions
 
 
-def write_file(file: FileObject):
+def write_file(file: FileObject, obj_folder: str = OBJECTS_FOLDER):
     """
     Writes a FileObject to the object folder
+    :param obj_folder: location of objects folder
     :param file: the file to be written
     :return: void
     """
+    if file is None:
+        raise TypeError("Cannot write None file object")
+
     file_hash = file.__hash__()
     if object_exists(file_hash):
         return
 
+    os.mkdir(os.path.join(obj_folder, file_hash[:2]))
+
     with open(file.filename, "rb") as readFrom:
-        with open(f".gto/objects/{file_hash[:2]}/{file_hash[2:]}", "xb") as writeTo:
+        with open(os.path.join(obj_folder, file_hash[:2], file_hash[2:]), "xb") as writeTo:
             while True:
                 data = readFrom.read(BUFFER_SIZE)
                 if not data:
@@ -44,12 +36,12 @@ def write_file(file: FileObject):
                 writeTo.write(compress(data, 9))
 
 
-def write_tree(tree: TreeObject):
+def write_tree(tree: TreeObject, obj_folder: str = OBJECTS_FOLDER):
     tree_hash = tree.__hash__()
     if object_exists(tree_hash):
         return
 
-    with open(f".gto/objects/{tree_hash[:2]}/{tree_hash[2:]}", "xb") as writeTo:
+    with open(f"{obj_folder}/{tree_hash[:2]}/{tree_hash[2:]}", "xb") as writeTo:
 
         data = tree.name
         for f in tree.files:
@@ -67,13 +59,13 @@ def write_tree(tree: TreeObject):
         write_tree(t)
 
 
-def write_commit(commit: CommitObject):
+def write_commit(commit: CommitObject, obj_folder: str = OBJECTS_FOLDER):
     c_hash = commit.__hash__()
     if object_exists(c_hash):
         return
 
     # TODO write a commit to storage
-    with open(f".gto/objects/{c_hash[:2]}/{c_hash[2:]}", "xb") as writeTo:
+    with open(f"{obj_folder}/{c_hash[:2]}/{c_hash[2:]}", "xb") as writeTo:
         pass
 
 
