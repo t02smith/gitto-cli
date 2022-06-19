@@ -1,9 +1,12 @@
+import datetime
 import os
 import pathspec
 from gitto.storage.objects import *
 from os.path import isdir, exists
 from os import mkdir
 from zlib import compress, decompress
+from gitto.storage.storage_info import *
+from gitto.storage.util import *
 
 
 def object_exists(obj_hash: str):
@@ -53,9 +56,15 @@ def write_tree(tree: TreeObject):
             data += f"\nfile {f.__hash__()} {f.filename}"
 
         for t in tree.trees:
-            data += f"\ntree {t.__hash__()} {t.name}\n"
+            data += f"\ntree {t.__hash__()} {t.name}"
 
         writeTo.write(compress(bytes(data, "utf8"), 9))
+
+    for f in tree.files:
+        write_file(f)
+
+    for t in tree.trees:
+        write_tree(t)
 
 
 def write_commit(commit: CommitObject):
@@ -63,46 +72,64 @@ def write_commit(commit: CommitObject):
     if object_exists(c_hash):
         return
 
+    # TODO write a commit to storage
     with open(f".gto/objects/{c_hash[:2]}/{c_hash[2:]}", "xb") as writeTo:
         pass
 
 
-# Reader function
-
-def read_object(obj_hash: str):
-    """
-    Reads an object from the object folder
-    :param obj_hash: the hash of the desired object
-    :return: the plaintext of the object
-    """
-    output = ""
-    with open(f".gto/objects/{obj_hash[:2]}/{obj_hash[2:]}", "rb") as f:
-        while True:
-            data = f.read(BUFFER_SIZE)
-            if not data:
-                break
-            output += decompress(data).decode()
-    return output
-
-
 # Generator functions
 
-def generate_objects():
+def generate_commit(author: str, message: str = None):
+    info = read_info()
+
+    ts = datetime.datetime.now()
+    # find parent tree
+    if info is not None and info.last_commit is not None:
+        parent = read_object(info.last_commit)
+
+    # generate tree
+    tree = generate_tree()
+
+    # find changes
+    pass
+
+
+def generate_tree():
+    """
+    Generate a list of tree and file objects
+    Reads the contents of the .gtoignore file
+    :return: the root tree object
+    """
 
     # read .ignore file
-    spec = None
     if os.path.exists(".gtoignore"):
         with open(".gtoignore", "r") as g:
             spec = pathspec.PathSpec.from_lines("gitwildmatch", g.readlines())
+        return _generate_tree(".", spec)
 
-    # find files to be committed
-    file_list = []
-    for root, dirs, files in os.walk("."):
-        if not spec.match_file(root):
-            for name in files:
-                filepath = os.path.join(root, name)
-                if spec is None or not spec.match_file(filepath):
-                    print(filepath)
-                    file_list.append(filepath)
+    return _generate_tree(".")
 
-    # create file objects
+
+def _generate_tree(root_dir: str, spec: pathspec.PathSpec = None) -> TreeObject:
+    """
+    Recursively generate a tree object
+    !! should only be used via the generate_objects function
+    :param root_dir: the directory to generate the tree from
+    :param spec: the spec to ignore any ignored files
+    :return: a tree of the cwd
+    """
+    tree = TreeObject(name=root_dir)
+
+    # discover valid directories and files in cwd
+    objects = set(os.listdir(root_dir))
+
+    for o in objects:
+        path = os.path.join(root_dir, o)
+        if spec is None or not spec.match_file(path):
+            if os.path.isdir(path):
+                tree.trees.append(_generate_tree(path, spec))
+            else:
+                tree.files.append(
+                    FileObject(filename=path))
+
+    return tree

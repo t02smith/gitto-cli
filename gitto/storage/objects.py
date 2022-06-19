@@ -1,6 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from hashlib import sha1
+from gitto.storage.util import read_object
 
 """
 All data stored by gitto will need to be turned into some
@@ -11,13 +12,20 @@ kind of object that will be compressed and stored in the
 
 BUFFER_SIZE = 65536  # 64kb buffer
 
+"""
+
+Files:
+the compressed contents of a committed file at the time it was committed
+file format: none
+
+"""
+
 
 @dataclass
 class FileObject:
     """
     Represents the contents of a file stored
     """
-
     filename: str
     _hash: str = None
 
@@ -41,6 +49,22 @@ class FileObject:
         return self._hash
 
 
+"""
+
+Trees:
+the directory structure at the time of a given commit 
+includes references to file and tree objects where appropriate
+file format: (x files, y sub-dirs)
+    1.    folder name from repo root
+    2.    file file_hash file_name
+    ....
+    x+1.  file file_hash file_name
+    x+2   tree tree_hash tree_dir_name
+    x+y+2 tree tree_hash tree_dir_name
+
+"""
+
+
 @dataclass
 class TreeObject:
     """
@@ -49,8 +73,8 @@ class TreeObject:
     """
 
     name: str
-    files: list[FileObject]
-    trees: list["TreeObject"]
+    files: list[FileObject] = field(default_factory=list)
+    trees: list["TreeObject"] = field(default_factory=list)
     _hash: str = None
 
     def __hash__(self):
@@ -75,10 +99,32 @@ class TreeObject:
         return self._hash
 
 
+def parse_tree(tree_hash: str, data: str) -> TreeObject:
+    """
+    uses data from a tree object file and generates a TreeObject
+    will recursively load other trees
+    :param tree_hash: current tree's hash
+    :param data: data from tree object file
+    :return: the given tree object
+    """
+    lines = data.splitlines()
+
+    t = TreeObject(name=lines[0], _hash=tree_hash)
+    for lineNo, line in enumerate(lines, start=1):
+        cols = line.split(" ")
+        match cols[0]:
+            case "file":
+                t.files.append(FileObject(filename=cols[2], _hash=cols[1]))
+            case "tree":
+                t.trees.append(parse_tree(cols[2],read_object(cols[1])))
+
+    return t
+
+
 @dataclass
 class CommitObject:
     """
-
+    Represents a snapshot of the code at a given point in time
     """
 
     author: str
@@ -106,3 +152,8 @@ class CommitObject:
 
         self._hash = hasher.hexdigest()
         return self._hash
+
+
+def parse_commit(data: str):
+    # TODO parse commit file
+    pass
