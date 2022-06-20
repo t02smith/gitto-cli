@@ -1,12 +1,9 @@
 import datetime
-import os
 import pathspec
 from gitto.storage.objects import *
 from zlib import compress
 from gitto.storage.storage_info import *
 from gitto.storage.util import *
-
-OBJECTS_FOLDER = ".gto/objects"
 
 # Writer functions
 
@@ -14,7 +11,7 @@ OBJECTS_FOLDER = ".gto/objects"
 def write_file(file: FileObject, obj_folder: str = OBJECTS_FOLDER):
     """
     Writes a FileObject to the object folder
-    :param obj_folder: location of objects folder
+    :param obj_folder: locations of objects folder
     :param file: the file to be written
     :return: void
     """
@@ -22,7 +19,7 @@ def write_file(file: FileObject, obj_folder: str = OBJECTS_FOLDER):
         raise TypeError("Cannot write None file object")
 
     file_hash = file.__hash__()
-    if object_exists(file_hash):
+    if object_exists(file_hash, obj_folder=obj_folder):
         return
 
     os.mkdir(os.path.join(obj_folder, file_hash[:2]))
@@ -37,11 +34,16 @@ def write_file(file: FileObject, obj_folder: str = OBJECTS_FOLDER):
 
 
 def write_tree(tree: TreeObject, obj_folder: str = OBJECTS_FOLDER):
+    if tree is None:
+        raise TypeError("Cannot write None file object")
+
     tree_hash = tree.__hash__()
     if object_exists(tree_hash):
         return
 
-    with open(f"{obj_folder}/{tree_hash[:2]}/{tree_hash[2:]}", "xb") as writeTo:
+    os.mkdir(os.path.join(obj_folder, tree_hash[:2]))
+
+    with open(os.path.join(obj_folder, tree_hash[0:2], tree_hash[2:]), "xb") as writeTo:
 
         data = tree.name
         for f in tree.files:
@@ -53,20 +55,16 @@ def write_tree(tree: TreeObject, obj_folder: str = OBJECTS_FOLDER):
         writeTo.write(compress(bytes(data, "utf8"), 9))
 
     for f in tree.files:
-        write_file(f)
+        write_file(f, obj_folder=obj_folder)
 
     for t in tree.trees:
-        write_tree(t)
+        write_tree(t, obj_folder=obj_folder)
 
 
 def write_commit(commit: CommitObject, obj_folder: str = OBJECTS_FOLDER):
     c_hash = commit.__hash__()
     if object_exists(c_hash):
         return
-
-    # TODO write a commit to storage
-    with open(f"{obj_folder}/{c_hash[:2]}/{c_hash[2:]}", "xb") as writeTo:
-        pass
 
 
 # Generator functions
