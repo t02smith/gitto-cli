@@ -2,7 +2,8 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from hashlib import sha1
-from gitto.storage.util import read_object
+from gitto.storage.util import read_object, OBJECTS_FOLDER
+from dateutil.parser import isoparse
 
 """
 All data stored by gitto will need to be turned into some
@@ -100,6 +101,10 @@ class TreeObject:
         if self._hash is not None:
             return self._hash
 
+        # assert that the hash is always the same
+        self.files.sort(key=lambda file: file.filename)
+        self.trees.sort(key=lambda tree: tree.name)
+
         hasher = sha1()
         hasher.update(bytes(self.name, "utf8"))
 
@@ -135,6 +140,21 @@ def parse_tree(tree_hash: str, data: str) -> TreeObject:
     return t
 
 
+"""
+
+Commits:
+represents a snapshot of code at a given point in time including
+meta data about the snapshot
+file format:
+    1. timestamp
+    2. author
+    3. message
+    4. parent | None
+    5. tree
+
+"""
+
+
 @dataclass
 class CommitObject:
     """
@@ -145,7 +165,7 @@ class CommitObject:
     message: str
     parent_hash: str
     timestamp: datetime
-    tree_hash: str
+    tree: TreeObject
     _hash: str = None
 
     def __hash__(self):
@@ -160,14 +180,23 @@ class CommitObject:
         hasher = sha1()
         hasher.update(bytes(self.author, "utf8"))
         hasher.update(bytes(self.message, "utf8"))
-        hasher.update(bytes(self.parent_hash, "utf8"))
-        hasher.update(self.timestamp)
-        hasher.update(bytes(self.tree_hash, "utf8"))
+
+        if self.parent_hash is not None:
+            hasher.update(bytes(self.parent_hash, "utf8"))
+
+        hasher.update(bytes(self.timestamp.isoformat(), "utf8"))
+        hasher.update(bytes(self.tree.__hash__(), "utf8"))
 
         self._hash = hasher.hexdigest()
         return self._hash
 
 
-def parse_commit(data: str):
-    # TODO parse commit file
-    pass
+def parse_commit(data: str, obj_folder: str = OBJECTS_FOLDER):
+    lines = data.splitlines()
+    return CommitObject(
+        timestamp=isoparse(lines[0]),
+        author=lines[1],
+        message=lines[2],
+        parent_hash=lines[3] if lines[3] != "None" else None,
+        tree=parse_tree(lines[4], read_object(lines[4], obj_folder=obj_folder))
+    )

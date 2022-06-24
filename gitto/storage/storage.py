@@ -2,8 +2,9 @@ import datetime
 import pathspec
 from gitto.storage.objects import *
 from zlib import compress
-from gitto.storage.storage_info import *
+from gitto.storage.info import *
 from gitto.storage.util import *
+from gitto.cli.rich import console
 
 # Writer functions
 
@@ -22,7 +23,10 @@ def write_file(file: FileObject, obj_folder: str = OBJECTS_FOLDER):
     if object_exists(file_hash, obj_folder=obj_folder):
         return
 
-    os.mkdir(os.path.join(obj_folder, file_hash[:2]))
+    if not os.path.exists(os.path.join(obj_folder, file_hash[:2])):
+        os.mkdir(os.path.join(obj_folder, file_hash[:2]))
+
+    console.print(f"[green]Writing file: {file.__hash__()} {file.filename}[/green]")
 
     with open(file.filename, "rb") as readFrom:
         with open(os.path.join(obj_folder, file_hash[:2], file_hash[2:]), "xb") as writeTo:
@@ -41,7 +45,10 @@ def write_tree(tree: TreeObject, obj_folder: str = OBJECTS_FOLDER):
     if object_exists(tree_hash):
         return
 
-    os.mkdir(os.path.join(obj_folder, tree_hash[:2]))
+    if not os.path.exists(os.path.join(obj_folder, tree_hash[:2])):
+        os.mkdir(os.path.join(obj_folder, tree_hash[:2]))
+
+    console.print(f"[blue]Writing tree: {tree.__hash__()} {tree.name}[/blue]")
 
     with open(os.path.join(obj_folder, tree_hash[0:2], tree_hash[2:]), "xb") as writeTo:
 
@@ -66,22 +73,42 @@ def write_commit(commit: CommitObject, obj_folder: str = OBJECTS_FOLDER):
     if object_exists(c_hash):
         return
 
+    if not os.path.exists(os.path.join(obj_folder, c_hash[:2])):
+        os.mkdir(os.path.join(obj_folder, c_hash[:2]))
+
+    with open(os.path.join(obj_folder, c_hash[0:2], c_hash[2:]), "xb") as writeTo:
+        writeTo.write(bytes(commit.timestamp.isoformat(), "utf8"))
+        writeTo.write(bytes(commit.author, "utf8"))
+        writeTo.write(bytes(commit.message, "utf8"))
+
+        if commit.parent_hash is not None:
+            writeTo.write(bytes(commit.parent_hash, "utf8"))
+        else:
+            writeTo.write(b"None")
+
+        writeTo.write(bytes(commit.tree.__hash__(), "utf8"))
+
 
 # Generator functions
+
 
 def generate_commit(author: str, message: str = None):
     info = read_info()
 
-    ts = datetime.datetime.now()
-    # find parent tree
-    if info is not None and info.last_commit is not None:
-        parent = read_object(info.last_commit)
+    c = CommitObject(
+        author=author,
+        message=message,
+        parent_hash=None if info.last_commit is None else info.last_commit,
+        timestamp=datetime.now(),
+        tree=generate_tree())
 
-    # generate tree
-    tree = generate_tree()
+    write_tree(c.tree)
+    write_commit(c)
 
-    # find changes
-    pass
+    info.last_commit = c.__hash__()
+    write_info(info)
+
+    return c
 
 
 def generate_tree():
@@ -114,12 +141,48 @@ def _generate_tree(root_dir: str, spec: pathspec.PathSpec = None) -> TreeObject:
     objects = set(os.listdir(root_dir))
 
     for o in objects:
-        path = os.path.join(root_dir, o)
-        if spec is None or not spec.match_file(path):
-            if os.path.isdir(path):
-                tree.trees.append(_generate_tree(path, spec))
+        filepath = os.path.join(root_dir, o)
+        if spec is None or not spec.match_file(filepath):
+            if os.path.isdir(filepath):
+                tree.trees.append(_generate_tree(filepath, spec))
             else:
                 tree.files.append(
-                    FileObject(filename=path))
+                    FileObject(filename=filepath))
 
     return tree
+
+
+def diff(blob: FileObject, new:  FileObject, show_unchanged: bool = True):
+    """
+    Shows differences between two (of the same) files
+    :param blob: the original copy
+    :param new: the new copy of the file
+    :param show_unchanged: whether to print only the changed files or not
+    :return: void
+    """
+    with open(os.path.join(OBJECTS_FOLDER, blob.__hash__()[:2], blob.__hash__()[2:]), "rb") as f:
+        blob_data = decompress(f.read()).decode().splitlines()
+
+    with open(new.filename, "r") as f:
+        new_data = f.read().splitlines()
+
+    insertions = 0
+    removals = 0
+
+    for i in range(max(len(blob_data), len(new_data))):
+        if i >= len(blob_data):
+            console.print(f"{str(i + 1).ljust(4, ' ')} [green]{new_data[i]}[/green]")
+            insertions += 1
+        elif i > len(new_data):
+            console.print(f"{str(i + 1).ljust(4, ' ')} [red]{blob_data[i]}[/red]")
+            removals += 1
+        elif blob_data[i] != new_data[i]:
+            console.print(f"{str(i+1).ljust(4, ' ')} [red]{blob_data[i]}[/red]")
+            console.print(f"{str(i+1).ljust(4, ' ')} [green]{new_data[i]}[/green]")
+            insertions += 1
+            removals += 1
+        elif show_unchanged:
+            console.print(f"{str(i+1).ljust(4, ' ')} {blob_data[i]}")
+
+    console.print(f"\n[red]lines removed: {removals}[/red]")
+    console.print(f"[green]lines added: {insertions}[/green]")

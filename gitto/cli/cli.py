@@ -26,9 +26,8 @@ def init() -> None:
 @app.command()
 def commit(
         msg: Optional[str] = typer.Option("", "--message", "-m"),
-        autoPush: Optional[bool] = typer.Option(False, "--auto-push", "-p")
 ) -> None:
-    pass
+    commit_changes(msg)
 
 
 # PUSH

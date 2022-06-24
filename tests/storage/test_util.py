@@ -2,6 +2,8 @@ import pytest
 from gitto.storage.util import *
 from tests.storage.fixtures import *
 
+# TODO mock OBJECTS_FOLDER value
+
 
 class TestCheckHash:
 

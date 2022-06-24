@@ -78,3 +78,14 @@ def write_test_tree_no_sub_trees(test_tree_no_sub_trees, objects):
 @pytest.fixture()
 def test_tree_with_depth(tmpdir, test_file):
     pass
+
+
+# test commit
+
+def test_commit():
+    return CommitObject(
+        author="t02smith",
+        timestamp=datetime(2002, 1, 9),
+        message="initial commit",
+        parent_hash=None
+    )

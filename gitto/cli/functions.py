@@ -1,7 +1,8 @@
-import datetime
-from os import path, mkdir, getcwd
-from gitto.repo.repo import GtoRepo, openRepo, GtoCommit
+from os import mkdir
 from gitto.repo.errors import RepoAlreadyInitialised
+from gitto.storage.storage import *
+from gitto.cli.templates import *
+from gitto.cli.rich import console
 
 
 def init_repo():
@@ -16,18 +17,10 @@ def init_repo():
     mkdir(".gto/objects")
 
 
-def commit(message: str, autoPush: bool):
+def commit_changes(message: str):
     """
     Store all changes since last commit
     :param message: description of changes
-    :param autoPush: whether to automatically push to remote
     :return: void
     """
-    with openRepo() as repo:
-        curr_commit = GtoCommit()
-        curr_commit.message = message
-        curr_commit.message = datetime.datetime.now()
-
-        # auto add files
-
-        # check for changes
+    console.print(template_commit(generate_commit("t02smith", message)))

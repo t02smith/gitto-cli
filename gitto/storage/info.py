@@ -19,7 +19,7 @@ def read_info():
     :return: the info file or nothing
     """
     if not path.isfile(".gto/info.json"):
-        return None
+        return StorageInfo()
 
     with open(".gto/info.json", "r") as f:
         info = loads(f.read())
