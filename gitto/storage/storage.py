@@ -69,6 +69,12 @@ def write_tree(tree: TreeObject, obj_folder: str = OBJECTS_FOLDER):
 
 
 def write_commit(commit: CommitObject, obj_folder: str = OBJECTS_FOLDER):
+    """
+    Write a commit to an object file
+    :param commit: commit to write
+    :param obj_folder: where objects are stored
+    :return: void
+    """
     c_hash = commit.__hash__()
     if object_exists(c_hash):
         return
@@ -77,22 +83,23 @@ def write_commit(commit: CommitObject, obj_folder: str = OBJECTS_FOLDER):
         os.mkdir(os.path.join(obj_folder, c_hash[:2]))
 
     with open(os.path.join(obj_folder, c_hash[0:2], c_hash[2:]), "xb") as writeTo:
-        writeTo.write(bytes(commit.timestamp.isoformat(), "utf8"))
-        writeTo.write(bytes(commit.author, "utf8"))
-        writeTo.write(bytes(commit.message, "utf8"))
-
-        if commit.parent_hash is not None:
-            writeTo.write(bytes(commit.parent_hash, "utf8"))
-        else:
-            writeTo.write(b"None")
-
-        writeTo.write(bytes(commit.tree.__hash__(), "utf8"))
-
+        data = f"{commit.timestamp.isoformat()}\n" \
+               f"{commit.author}\n" \
+               f"{'None' if commit.parent_hash is None else commit.parent_hash}\n" \
+               f"{commit.tree.__hash__()}\n" \
+               f"{commit.message}"
+        writeTo.write(compress(bytes(data, "utf8"), 5))
 
 # Generator functions
 
 
 def generate_commit(author: str, message: str = None):
+    """
+    Generates a commit given the current working directory
+    :param author: who wrote the code
+    :param message: the contextual message
+    :return: Commit object
+    """
     info = read_info()
 
     c = CommitObject(

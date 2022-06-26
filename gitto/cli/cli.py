@@ -30,6 +30,13 @@ def commit(
     commit_changes(msg)
 
 
+# LOG
+
+@app.command()
+def log():
+    log_commits()
+
+
 # PUSH
 
 @app.command()

@@ -196,7 +196,7 @@ def parse_commit(data: str, obj_folder: str = OBJECTS_FOLDER):
     return CommitObject(
         timestamp=isoparse(lines[0]),
         author=lines[1],
-        message=lines[2],
-        parent_hash=lines[3] if lines[3] != "None" else None,
-        tree=parse_tree(lines[4], read_object(lines[4], obj_folder=obj_folder))
+        message=lines[4],
+        parent_hash=lines[2] if lines[2] != "None" else None,
+        tree=parse_tree(lines[3], read_object(lines[3], obj_folder=obj_folder))
     )
