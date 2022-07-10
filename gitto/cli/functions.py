@@ -1,13 +1,13 @@
 from os import mkdir
 from rich.table import Table
-from gitto.repo.errors import RepoAlreadyInitialised
+from gitto.errors import RepoAlreadyInitialised
 from gitto.storage.storage import *
 from gitto.cli.templates import *
-from gitto.cli.rich import console
 from gitto.storage.info import *
+from gitto.network.requests import *
 
 
-def init_repo():
+def init_repo(name: str):
     """
     Initialise a gto repository
     :return: void
@@ -17,6 +17,11 @@ def init_repo():
 
     mkdir(".gto")
     mkdir(".gto/objects")
+
+    if name is None:
+        write_info(StorageInfo(repo_name=os.path.basename(os.getcwd())))
+    else:
+        write_info(StorageInfo(repo_name=name))
 
 
 def commit_changes(message: str):
@@ -56,3 +61,4 @@ def log_commits():
         table.add_row(get_date(commit.timestamp), get_time(commit.timestamp), commit.author, commit.message)
 
     console.print(table)
+

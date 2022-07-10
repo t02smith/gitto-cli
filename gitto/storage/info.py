@@ -9,6 +9,7 @@ class StorageInfo:
     Stores info relevant to the repository
     to track attributes about it
     """
+    repo_name: str = None
     last_commit: str = None
     remote_location: str = None
 
@@ -25,6 +26,7 @@ def read_info():
         info = loads(f.read())
 
     return StorageInfo(
+        repo_name=info["repo_name"],
         last_commit=info["last_commit"],
         remote_location=info["remote_location"]
     )
@@ -48,6 +50,10 @@ def write_info(info: StorageInfo):
         if info.remote_location is None or info.remote_location != curr_info.remote_location:
             changes = True
             curr_info.remote_location = info.remote_location
+
+        if info.repo_name is None  or info.repo_name != curr_info.repo_name:
+            changes = True
+            curr_info.repo_name = info.repo_name
     else:
         changes = True
 

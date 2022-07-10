@@ -2,6 +2,7 @@ import typer
 from typing import Optional
 from gitto.cli.functions import *
 from rich.console import Console
+from gitto.network.requests import push as push_to_remote
 
 # SETUP
 
@@ -13,9 +14,11 @@ console = Console()
 
 
 @app.command(short_help="Initialise a new repository in the current directory")
-def init() -> None:
+def init(
+        name: Optional[str] = typer.Option(None, "--name", "-n")
+) -> None:
     try:
-        init_repo()
+        init_repo(name)
         console.print("[green]Repository successfully created[/green]")
     except Exception as e:
         console.print(f"[red]{e}[/red]")
@@ -40,5 +43,5 @@ def log():
 # PUSH
 
 @app.command()
-def push() -> None:
-    pass
+def push():
+    push_to_remote()

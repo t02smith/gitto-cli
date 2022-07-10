@@ -4,6 +4,7 @@ from datetime import datetime
 from hashlib import sha1
 from gitto.storage.util import read_object, OBJECTS_FOLDER
 from dateutil.parser import isoparse
+from gitto.storage.info import read_info
 
 """
 All data stored by gitto will need to be turned into some
@@ -18,7 +19,10 @@ BUFFER_SIZE = 65536  # 64kb buffer
 
 Files:
 the compressed contents of a committed file at the time it was committed
-file format: none
+file format: 
+1. filename
+2. file content
+3. .....
 
 """
 
@@ -62,6 +66,12 @@ class FileObject:
 
         self._hash = hasher.hexdigest()
         return self._hash
+
+    def toDict(self):
+        return {
+            "filename": self.filename,
+            "hash": self.__hash__()
+        }
 
 
 """
@@ -117,6 +127,14 @@ class TreeObject:
         self._hash = hasher.hexdigest()
         return self._hash
 
+    def toDict(self):
+        dic = self.__dict__.copy()
+        dic["files"] = [f.toDict() for f in self.files]
+        dic["trees"] = [t.toDict() for t in self.trees]
+        dic["hash"] = self.__hash__()
+        del(dic["_hash"])
+        return dic
+
 
 def parse_tree(tree_hash: str, data: str) -> TreeObject:
     """
@@ -135,7 +153,7 @@ def parse_tree(tree_hash: str, data: str) -> TreeObject:
             case "file":
                 t.files.append(FileObject(filename=cols[2], _hash=cols[1]))
             case "tree":
-                t.trees.append(parse_tree(cols[2],read_object(cols[1])))
+                t.trees.append(parse_tree(cols[1], read_object(cols[1])))
 
     return t
 
@@ -190,6 +208,14 @@ class CommitObject:
         self._hash = hasher.hexdigest()
         return self._hash
 
+    def toDict(self):
+        dic = self.__dict__.copy()
+        dic["tree"] = self.tree.toDict()
+        dic["hash"] = self.__hash__()
+        del(dic["_hash"])
+        dic["timestamp"] = self.timestamp.isoformat()
+        return dic
+
 
 def parse_commit(data: str, obj_folder: str = OBJECTS_FOLDER):
     lines = data.splitlines()
@@ -200,3 +226,8 @@ def parse_commit(data: str, obj_folder: str = OBJECTS_FOLDER):
         parent_hash=lines[2] if lines[2] != "None" else None,
         tree=parse_tree(lines[3], read_object(lines[3], obj_folder=obj_folder))
     )
+
+
+def latest_commit():
+    info = read_info()
+    return parse_commit(read_object(info.last_commit))
